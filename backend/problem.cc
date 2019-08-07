@@ -19,15 +19,15 @@ const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, Eigen::DontAlignC
 void writeToCSVfile(std::string name, Eigen::MatrixXd matrix) {
     std::ofstream f(name.c_str());
     f << matrix.format(CSVFormat);
-}
+}                                                           // 定义writetocsvfile函数将矩阵写入文档
 
 namespace myslam {
 namespace backend {
 void Problem::LogoutVectorSize() {
-    // LOG(INFO) <<
-    //           "1 problem::LogoutVectorSize verticies_:" << verticies_.size() <<
-    //           " edges:" << edges_.size();
-}
+     LOG(INFO) <<
+               "1 problem::LogoutVectorSize verticies_:" << verticies_.size() <<
+               " edges:" << edges_.size();
+}                                                           // 日志输出函数，输出向量的大小，边的个数
 
 Problem::Problem(ProblemType problemType) :
     problemType_(problemType) {
@@ -39,7 +39,7 @@ Problem::~Problem() {}
 
 bool Problem::AddVertex(std::shared_ptr<Vertex> vertex) {
     if (verticies_.find(vertex->Id()) != verticies_.end()) {
-        // LOG(WARNING) << "Vertex " << vertex->Id() << " has been added before";
+         LOG(WARNING) << "Vertex " << vertex->Id() << " has been added before";
         return false;
     } else {
         verticies_.insert(pair<unsigned long, shared_ptr<Vertex>>(vertex->Id(), vertex));

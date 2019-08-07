@@ -70,7 +70,7 @@ int main() {
     Problem problem(Problem::ProblemType::SLAM_PROBLEM);
 
     // 所有 Pose
-    vector<shared_ptr<VertexPose> > vertexCams_vec;
+    vector<shared_ptr<VertexPose> > vertexCams_vec;//shared_ptr<T>表示指向T类的指针，可以多个指针指向同一个类型
     for (size_t i = 0; i < cameras.size(); ++i) {
         shared_ptr<VertexPose> vertexCam(new VertexPose());
         Eigen::VectorXd pose(7);
@@ -88,7 +88,7 @@ int main() {
     std::default_random_engine generator;
     std::normal_distribution<double> noise_pdf(0, 1.);
     double noise = 0;
-    vector<double> noise_invd;
+    vector<double> noise_invd;//带有噪音的逆深度
     vector<shared_ptr<VertexInverseDepth> > allPoints;
     for (size_t i = 0; i < points.size(); ++i) {
         //假设所有特征点的起始帧为第0帧， 逆深度容易得到
@@ -101,7 +101,7 @@ int main() {
 
         // 初始化特征 vertex
         shared_ptr<VertexInverseDepth> verterxPoint(new VertexInverseDepth());
-        VecX inv_d(1);
+        VecX inv_d(1);//VecX动态大小列向量
         inv_d << inverse_depth;
         verterxPoint->SetParameters(inv_d);
         problem.AddVertex(verterxPoint);

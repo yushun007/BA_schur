@@ -7,7 +7,7 @@ namespace myslam {
 namespace backend {
 
 /**
- * @brief 顶点，对应一个parameter block
+ * @brief 顶点，对应一个parameter block参数块
  * 变量值以VecX存储，需要在构造时指定维度
  */
 class Vertex {
