@@ -119,11 +119,12 @@ bool Problem::AddEdge(shared_ptr<Edge> edge) {
 
 vector<shared_ptr<Edge>> Problem::GetConnectedEdges(std::shared_ptr<Vertex> vertex) {
     vector<shared_ptr<Edge>> edges;
-    auto range = vertexToEdge_.equal_range(vertex->Id());
+    auto range = vertexToEdge_.equal_range(vertex->Id());//equal_range()在vertexToEdge中查找顶点,返回一对迭代器,分别表示查找的第一个迭代器,和最后一个迭代器
+    //map.<string,int>m,m->first返回string类型m->second返回int类型
     for (auto iter = range.first; iter != range.second; ++iter) {
 
         // 并且这个edge还需要存在，而不是已经被remove了
-        if (edges_.find(iter->second->Id()) == edges_.end())
+        if (edges_.find(iter->second->Id()) == edges_.end())//iter->second返回该迭代器下vertexToedge_的第二个值即edge
             continue;
 
         edges.emplace_back(iter->second);
@@ -145,7 +146,7 @@ bool Problem::RemoveVertex(std::shared_ptr<Vertex> vertex) {
     }
 
     if (IsPoseVertex(vertex))
-        idx_pose_vertices_.erase(vertex->Id());
+        idx_pose_vertices_.erase(vertex->Id());//.erase()删除指定元素,返回指定元素的下一个元素的迭代器
     else
         idx_landmark_vertices_.erase(vertex->Id());
 
@@ -166,7 +167,7 @@ bool Problem::RemoveEdge(std::shared_ptr<Edge> edge) {
     edges_.erase(edge->Id());
     return true;
 }
-
+//iteration迭代步数
 bool Problem::Solve(int iterations) {
 
 
@@ -266,6 +267,7 @@ void Problem::SetOrdering() {
     if (problemType_ == ProblemType::SLAM_PROBLEM) {
         // 这里要把 landmark 的 ordering 加上 pose 的数量，就保持了 landmark 在后,而 pose 在前
         ulong all_pose_dimension = ordering_poses_;
+        //从landmarkVertex开始遍历idx_landmark_vertices_
         for (auto landmarkVertex : idx_landmark_vertices_) {
             landmarkVertex.second->SetOrderingId(
                 landmarkVertex.second->OrderingId() + all_pose_dimension
@@ -295,7 +297,8 @@ bool Problem::CheckOrdering() {
 void Problem::MakeHessian() {
     TicToc t_h;
     // 直接构造大的 H 矩阵
-    ulong size = ordering_generic_;
+    //H矩阵的维度为
+    ulong size = ordering_generic_;//通用排序
     MatXX H(MatXX::Zero(size, size));
     VecX b(VecX::Zero(size));
 
@@ -307,7 +310,7 @@ void Problem::MakeHessian() {
         auto jacobians = edge.second->Jacobians();
         auto verticies = edge.second->Verticies();
         assert(jacobians.size() == verticies.size());
-        //判断雅克比矩阵是否和定点的个数相同;assert()函数表示判断条件是否为真,如果为真继续运行否则终止程序
+        //判断雅克比矩阵是否和所有顶点的维度相同;assert()函数表示判断条件是否为真,如果为真继续运行否则终止程序
         for (size_t i = 0; i < verticies.size(); ++i) {
             auto v_i = verticies[i];
             if (v_i->IsFixed()) continue;    // Hessian 里不需要添加它的信息，也就是它的雅克比为 0
@@ -329,12 +332,13 @@ void Problem::MakeHessian() {
                 assert(v_j->OrderingId() != -1);
                 MatXX hessian = JtW * jacobian_j;
                 // 所有的信息矩阵叠加起来
-                // TODO:: home work. 完成 H index 的填写.
-                 H.block(?,?, ?, ?).noalias() += hessian;
+                // TODO:: home work. 完成 H index  的填写.
+                 H.block(index_i,index_j,dim_i, dim_j).noalias() += hessian;
+                 //noalias函数主要是为了避免eigen中矩阵乘法的元素混淆没有其他用处
                 if (j != i) {
                     // 对称的下三角
 		    // TODO:: home work. 完成 H index 的填写.
-                    // H.block(?,?, ?, ?).noalias() += hessian.transpose();
+                 H.block(index_j,index_i, dim_j, dim_i).noalias() += hessian.transpose();
                 }
             }
             b.segment(index_i, dim_i).noalias() -= JtW * edge.second->Residual();
@@ -383,11 +387,12 @@ void Problem::SolveLinearSystem() {
         int marg_size = ordering_landmarks_;
 
         // TODO:: home work. 完成矩阵块取值，Hmm，Hpm，Hmp，bpp，bmm
-        // MatXX Hmm = Hessian_.block(?,?, ?, ?);
-        // MatXX Hpm = Hessian_.block(?,?, ?, ?);
-        // MatXX Hmp = Hessian_.block(?,?, ?, ?);
-        // VecX bpp = b_.segment(?,?);
-        // VecX bmm = b_.segment(?,?);
+        
+        MatXX Hmm = Hessian_.block(reserve_size,reserve_size, marg_size*3, marg_size*3);
+        MatXX Hpm = Hessian_.block(0,reserve_size, reserve_size*6,marg_size*3);
+        MatXX Hmp = Hessian_.block(reserve_size,0, marg_size*3, reserve_size*6);
+        VecX bpp = b_.segment(0,reserve_size*6);
+        VecX bmm = b_.segment(reserve_size,marg_size*3);
 
         // Hmm 是对角线矩阵，它的求逆可以直接为对角线块分别求逆，如果是逆深度，对角线块为1维的，则直接为对角线的倒数，这里可以加速
         MatXX Hmm_inv(MatXX::Zero(marg_size, marg_size));
@@ -399,8 +404,8 @@ void Problem::SolveLinearSystem() {
 
         // TODO:: home work. 完成舒尔补 Hpp, bpp 代码
         MatXX tempH = Hpm * Hmm_inv;
-        // H_pp_schur_ = Hessian_.block(?,?,?,?) - tempH * Hmp;
-        // b_pp_schur_ = bpp - ? * ?;
+        H_pp_schur_ = Hessian_.block(0,0,reserve_size*6,reserve_size*6) - tempH * Hmp;
+        b_pp_schur_ = bpp -  Hpm* Hmm_inv;
 
         // step2: solve Hpp * delta_x = bpp
         VecX delta_x_pp(VecX::Zero(reserve_size));
@@ -416,7 +421,7 @@ void Problem::SolveLinearSystem() {
 
         // TODO:: home work. step3: solve landmark
         VecX delta_x_ll(marg_size);
-        // delta_x_ll = ???;
+        delta_x_ll = Hmm_inv*(bmm+Hpm.transpose()*delta_x_pp);
         delta_x_.tail(marg_size) = delta_x_ll;
 
     }
@@ -590,13 +595,13 @@ void Problem::TestMarginalize() {
 
     // TODO:: home work. 将变量移动到右下角
     /// 准备工作： move the marg pose to the Hmm bottown right
-    // 将 row i 移动矩阵最下面
+    // 先将 row i 移动矩阵最下面
     Eigen::MatrixXd temp_rows = H_marg.block(idx, 0, dim, reserve_size);
     Eigen::MatrixXd temp_botRows = H_marg.block(idx + dim, 0, reserve_size - idx - dim, reserve_size);
-    // H_marg.block(?,?,?,?) = temp_botRows;
-    // H_marg.block(?,?,?,?) = temp_rows;
+    H_marg.block(idx,0,idx,reserve_size) = temp_botRows;
+    H_marg.block(idx+dim,0,reserve_size-idx-dim,reserve_size) = temp_rows;
 
-    // 将 col i 移动矩阵最右边
+    // 再将 col i 移动矩阵最右边
     Eigen::MatrixXd temp_cols = H_marg.block(0, idx, reserve_size, dim);
     Eigen::MatrixXd temp_rightCols = H_marg.block(0, idx + dim, reserve_size, reserve_size - idx - dim);
     H_marg.block(0, idx, reserve_size, reserve_size - idx - dim) = temp_rightCols;
@@ -617,9 +622,9 @@ void Problem::TestMarginalize() {
                               saes.eigenvectors().transpose();
 
     // TODO:: home work. 完成舒尔补操作
-    //Eigen::MatrixXd Arm = H_marg.block(?,?,?,?);
-    //Eigen::MatrixXd Amr = H_marg.block(?,?,?,?);
-    //Eigen::MatrixXd Arr = H_marg.block(?,?,?,?);
+    Eigen::MatrixXd Arm = H_marg.block(0,reserve_size,n2,m2);
+    Eigen::MatrixXd Amr = H_marg.block(reserve_size,0,m2,n2);
+    Eigen::MatrixXd Arr = H_marg.block(0,0,n2,n2);
 
     Eigen::MatrixXd tempB = Arm * Amm_inv;
     Eigen::MatrixXd H_prior = Arr - tempB * Amr;
