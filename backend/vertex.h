@@ -19,14 +19,14 @@ public:
      * @param num_dimension 顶点自身维度
      * @param local_dimension 本地参数化维度，为-1时认为与本身维度一样
      */
-    explicit Vertex(int num_dimension, int local_dimension = -1);
+    explicit Vertex(int num_dimension, int local_dimension = -1);//顶点构造函数,参数为顶点自身维度,顶点自由度
 
     virtual ~Vertex();
 
     /// 返回变量维度
     int Dimension() const;
 
-    /// 返回变量本地维度
+    /// 返回变量本地维度,即顶点自由度
     int LocalDimension() const;
 
     /// 该顶点的id
@@ -38,7 +38,7 @@ public:
     /// 返回参数值的引用
     VecX &Parameters() { return parameters_; }
 
-    /// 设置参数值
+    /// 设置参数值,设置顶点参数,即将顶点数据传入顶点
     void SetParameters(const VecX &params) { parameters_ = params; }
 
     /// 加法，可重定义

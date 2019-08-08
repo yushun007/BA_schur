@@ -23,7 +23,7 @@ public:
      *
      * 如果是SLAM问题那么pose和landmark是区分开的，Hessian以稀疏方式存储
      * SLAM问题只接受一些特定的Vertex和Edge
-     * 如果是通用问题那么hessian是稠密的，除非用户设定某些vertex为marginalized
+     * 如果是通用问题那么hessian是稠密的，除非用户设定某些vertex为marginalized(边缘化)
      */
     enum class ProblemType {
         SLAM_PROBLEM,
@@ -34,24 +34,34 @@ public:
     typedef std::map<unsigned long, std::shared_ptr<Vertex>> HashVertex;
     typedef std::unordered_map<unsigned long, std::shared_ptr<Edge>> HashEdge;
     typedef std::unordered_multimap<unsigned long, std::shared_ptr<Edge>> HashVertexIdToEdge;
-
+/**
+ * c++map类存储的是一对关键字和值，map可以理解为映射，从关键字到值得映射
+ * 类型有map multimap前者关键字不可重复，后者关键字可重复
+ * unordered_multimap保存无序可重复关键字与值对
+ * unordered_map保存无序不重复关键字与值对
+ */
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
     Problem(ProblemType problemType);
+    //problem类构造函数
 
     ~Problem();
 
     bool AddVertex(std::shared_ptr<Vertex> vertex);
+    //添加顶点
 
     /**
      * remove a vertex
      * @param vertex_to_remove
      */
     bool RemoveVertex(std::shared_ptr<Vertex> vertex);
+    //去掉顶点
 
     bool AddEdge(std::shared_ptr<Edge> edge);
+    //添加边
 
     bool RemoveEdge(std::shared_ptr<Edge> edge);
+    //去掉边
 
     /**
      * 取得在优化中被判断为outlier部分的边，方便前端去除outlier
@@ -65,6 +75,7 @@ public:
      * @return
      */
     bool Solve(int iterations);
+    //迭代求解iterations迭代
 
     /// 边缘化一个frame和以它为host的landmark
     bool Marginalize(std::shared_ptr<Vertex> frameVertex,
@@ -72,7 +83,7 @@ public:
 
     bool Marginalize(const std::shared_ptr<Vertex> frameVertex);
 
-    //test compute prior
+    //test compute prior计算先验矩阵
     void TestMarginalize();
 
 private:
@@ -101,7 +112,8 @@ private:
     /// 更新状态变量
     void UpdateStates();
 
-    void RollbackStates(); // 有时候 update 后残差会变大，需要退回去，重来
+    void RollbackStates(); 
+    // 有时候 update 后残差会变大，需要退回去，重来
 
     /// 计算并更新Prior部分
     void ComputePrior();
@@ -138,7 +150,7 @@ private:
     /// PCG 迭代线性求解器
     VecX PCGSolver(const MatXX &A, const VecX &b, int maxIter);
 
-    double currentLambda_;
+    double currentLambda_;//当前lambda
     double currentChi_;
     double stopThresholdLM_;    // LM 迭代退出阈值条件
     double ni_;                 //控制 Lambda 缩放大小
@@ -181,7 +193,7 @@ private:
     std::map<unsigned long, std::shared_ptr<Vertex>> idx_pose_vertices_;        // 以ordering排序的pose顶点
     std::map<unsigned long, std::shared_ptr<Vertex>> idx_landmark_vertices_;    // 以ordering排序的landmark顶点
 
-    // verticies need to marg. <Ordering_id_, Vertex>
+    // verticies need to marg. <Ordering_id_, Vertex>所有顶点中需要marg掉的顶点<oedering_id_,vertex>
     HashVertex verticies_marg_;
 
     bool bDebug = false;

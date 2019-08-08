@@ -13,13 +13,14 @@
 
 using namespace std;
 
-// define the format you want, you only need one instance of this...
+// 定义一个你想要的格式,但只要一个就够了
 const static Eigen::IOFormat CSVFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", "\n");
 
 void writeToCSVfile(std::string name, Eigen::MatrixXd matrix) {
     std::ofstream f(name.c_str());
     f << matrix.format(CSVFormat);
-}                                                           // 定义writetocsvfile函数将矩阵写入文档
+}                                                          
+ // 定义writetocsvfile函数将矩阵写入文档
 
 namespace myslam {
 namespace backend {
@@ -27,10 +28,12 @@ void Problem::LogoutVectorSize() {
      LOG(INFO) <<
                "1 problem::LogoutVectorSize verticies_:" << verticies_.size() <<
                " edges:" << edges_.size();
-}                                                           // 日志输出函数，输出向量的大小，边的个数
+}                                                         
+  // 日志输出函数，输出定点的个数，边的个数
 
 Problem::Problem(ProblemType problemType) :
-    problemType_(problemType) {
+    problemTy.
+    pe_(problemType) {
     LogoutVectorSize();
     verticies_marg_.clear();
 }
@@ -38,11 +41,18 @@ Problem::Problem(ProblemType problemType) :
 Problem::~Problem() {}
 
 bool Problem::AddVertex(std::shared_ptr<Vertex> vertex) {
-    if (verticies_.find(vertex->Id()) != verticies_.end()) {
+    if (verticies_.find(vertex->Id()) != verticies_.end())
+    /*
+    map.find(key),如果map中有此key则返回此key的迭代器,否则返回尾后迭代器
+     */
+    
+     {
          LOG(WARNING) << "Vertex " << vertex->Id() << " has been added before";
         return false;
     } else {
-        verticies_.insert(pair<unsigned long, shared_ptr<Vertex>>(vertex->Id(), vertex));
+        verticies_.insert(pair <unsigned long, shared_ptr<Vertex>> (vertex->Id(), vertex));
+        //verticies_的类型是<vertex->id(),vertex>即顶点的id和顶点变量指针
+        //pair< T1 , T2 >的使用是在对map填充时新建一对临时数据,赋值给map变量
     }
 
     if (problemType_ == ProblemType::SLAM_PROBLEM) {
@@ -52,10 +62,12 @@ bool Problem::AddVertex(std::shared_ptr<Vertex> vertex) {
     }
     return true;
 }
-
+//对顶点id重新排序
 void Problem::AddOrderingSLAM(std::shared_ptr<myslam::backend::Vertex> v) {
     if (IsPoseVertex(v)) {
         v->SetOrderingId(ordering_poses_);
+        //将pose_id换成orderingId
+        //pose_id在数据传入的时候已经按先后顺序生成
         idx_pose_vertices_.insert(pair<ulong, std::shared_ptr<Vertex>>(v->Id(), v));
         ordering_poses_ += v->LocalDimension();
     } else if (IsLandmarkVertex(v)) {
@@ -69,11 +81,14 @@ void Problem::ResizePoseHessiansWhenAddingPose(shared_ptr<Vertex> v) {
 
     int size = H_prior_.rows() + v->LocalDimension();
     H_prior_.conservativeResize(size, size);
+    //相对于Resize()函数改变矩阵的大小,conservativeResize()函数会在不改变原矩阵数值的情况下改变大小
     b_prior_.conservativeResize(size);
 
     b_prior_.tail(v->LocalDimension()).setZero();
+    //vectorXd.tail(n)取向量尾部的n个元素
     H_prior_.rightCols(v->LocalDimension()).setZero();
     H_prior_.bottomRows(v->LocalDimension()).setZero();
+    //matrix.bottomRows(n)取矩阵最后n行
 
 }
 
@@ -92,7 +107,7 @@ bool Problem::AddEdge(shared_ptr<Edge> edge) {
     if (edges_.find(edge->Id()) == edges_.end()) {
         edges_.insert(pair<ulong, std::shared_ptr<Edge>>(edge->Id(), edge));
     } else {
-        // LOG(WARNING) << "Edge " << edge->Id() << " has been added before!";
+        LOG(WARNING) << "Edge " << edge->Id() << " has been added before!";
         return false;
     }
 
@@ -292,6 +307,7 @@ void Problem::MakeHessian() {
         auto jacobians = edge.second->Jacobians();
         auto verticies = edge.second->Verticies();
         assert(jacobians.size() == verticies.size());
+        //判断雅克比矩阵是否和定点的个数相同;assert()函数表示判断条件是否为真,如果为真继续运行否则终止程序
         for (size_t i = 0; i < verticies.size(); ++i) {
             auto v_i = verticies[i];
             if (v_i->IsFixed()) continue;    // Hessian 里不需要添加它的信息，也就是它的雅克比为 0
@@ -314,7 +330,7 @@ void Problem::MakeHessian() {
                 MatXX hessian = JtW * jacobian_j;
                 // 所有的信息矩阵叠加起来
                 // TODO:: home work. 完成 H index 的填写.
-                // H.block(?,?, ?, ?).noalias() += hessian;
+                 H.block(?,?, ?, ?).noalias() += hessian;
                 if (j != i) {
                     // 对称的下三角
 		    // TODO:: home work. 完成 H index 的填写.

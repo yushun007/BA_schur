@@ -38,6 +38,7 @@ public:
      */
     bool AddVertex(std::shared_ptr<Vertex> vertex) {
         verticies_.emplace_back(vertex);
+        //emplace_back()与push_back()作用相同但速度要好的多
         return true;
     }
 

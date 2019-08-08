@@ -8,8 +8,8 @@ namespace myslam {
 namespace backend {
 
 /**
- * Pose vertex
- * parameters: tx, ty, tz, qx, qy, qz, qw, 7 DoF
+ * Pose vertex相机pose顶点子类
+ * parameters: tx, ty, tz, qx, qy, qz, qw, 7 DoF参数由一个平移向量,一个四元数组成
  * optimization is perform on manifold, so update is 6 DoF, left multiplication
  *
  * pose is represented as Twb in VIO case
@@ -22,7 +22,7 @@ public:
 
     /// 加法，可重定义
     /// 默认是向量加
-    virtual void Plus(const VecX &delta) override;
+    virtual void Plus(const VecX &delta) override;//覆盖父类vertex的plus函数
 
     std::string TypeInfo() const {
         return "VertexPose";
