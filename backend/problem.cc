@@ -25,15 +25,14 @@ void writeToCSVfile(std::string name, Eigen::MatrixXd matrix) {
 namespace myslam {
 namespace backend {
 void Problem::LogoutVectorSize() {
-     LOG(INFO) <<
-               "1 problem::LogoutVectorSize verticies_:" << verticies_.size() <<
-               " edges:" << edges_.size();
+    // LOG(INFO) <<
+       //        "1 problem::LogoutVectorSize verticies_:" << verticies_.size() <<
+        //       " edges:" << edges_.size();
 }                                                         
   // 日志输出函数，输出定点的个数，边的个数
 
 Problem::Problem(ProblemType problemType) :
-    problemTy.
-    pe_(problemType) {
+    problemType_(problemType) {
     LogoutVectorSize();
     verticies_marg_.clear();
 }
@@ -47,7 +46,7 @@ bool Problem::AddVertex(std::shared_ptr<Vertex> vertex) {
      */
     
      {
-         LOG(WARNING) << "Vertex " << vertex->Id() << " has been added before";
+       //  LOG(WARNING) << "Vertex " << vertex->Id() << " has been added before";
         return false;
     } else {
         verticies_.insert(pair <unsigned long, shared_ptr<Vertex>> (vertex->Id(), vertex));
@@ -107,7 +106,7 @@ bool Problem::AddEdge(shared_ptr<Edge> edge) {
     if (edges_.find(edge->Id()) == edges_.end()) {
         edges_.insert(pair<ulong, std::shared_ptr<Edge>>(edge->Id(), edge));
     } else {
-        LOG(WARNING) << "Edge " << edge->Id() << " has been added before!";
+       // LOG(WARNING) << "Edge " << edge->Id() << " has been added before!";
         return false;
     }
 
@@ -119,7 +118,8 @@ bool Problem::AddEdge(shared_ptr<Edge> edge) {
 
 vector<shared_ptr<Edge>> Problem::GetConnectedEdges(std::shared_ptr<Vertex> vertex) {
     vector<shared_ptr<Edge>> edges;
-    auto range = vertexToEdge_.equal_range(vertex->Id());//equal_range()在vertexToEdge中查找顶点,返回一对迭代器,分别表示查找的第一个迭代器,和最后一个迭代器
+    auto range = vertexToEdge_.equal_range(vertex->Id());
+    //equal_range()在vertexToEdge中查找顶点,返回一对迭代器,分别表示查找的第一个迭代器,和最后一个迭代器
     //map.<string,int>m,m->first返回string类型m->second返回int类型
     for (auto iter = range.first; iter != range.second; ++iter) {
 
@@ -253,7 +253,8 @@ void Problem::SetOrdering() {
             debug += vertex.second->LocalDimension();
         }
 
-        if (problemType_ == ProblemType::SLAM_PROBLEM)    // 如果是 slam 问题，还要分别统计 pose 和 landmark 的维数，后面会对他们进行排序
+        if (problemType_ == ProblemType::SLAM_PROBLEM)   
+         // 如果是 slam 问题，还要分别统计 pose 和 landmark 的维数，后面会对他们进行排序
         {
             AddOrderingSLAM(vertex.second);
         }
@@ -359,7 +360,7 @@ void Problem::MakeHessian() {
     Hessian_.topLeftCorner(ordering_poses_, ordering_poses_) += H_prior_;
     b_.head(ordering_poses_) += b_prior_;
 
-    delta_x_ = VecX::Zero(size);  // initial delta_x = 0_n;
+    delta_x_ = VecX::Zero(size);    // initial delta_x = 0_n;
 
 }
 
@@ -388,11 +389,11 @@ void Problem::SolveLinearSystem() {
 
         // TODO:: home work. 完成矩阵块取值，Hmm，Hpm，Hmp，bpp，bmm
         
-        MatXX Hmm = Hessian_.block(reserve_size,reserve_size, marg_size*3, marg_size*3);
-        MatXX Hpm = Hessian_.block(0,reserve_size, reserve_size*6,marg_size*3);
-        MatXX Hmp = Hessian_.block(reserve_size,0, marg_size*3, reserve_size*6);
-        VecX bpp = b_.segment(0,reserve_size*6);
-        VecX bmm = b_.segment(reserve_size,marg_size*3);
+        MatXX Hmm = Hessian_.block(reserve_size,reserve_size,marg_size,marg_size);
+        MatXX Hpm = Hessian_.block(0,reserve_size, reserve_size,marg_size);
+        MatXX Hmp = Hessian_.block(reserve_size,0, marg_size,reserve_size);
+        VecX bpp = b_.segment(0,reserve_size);
+        VecX bmm = b_.segment(reserve_size,marg_size);
 
         // Hmm 是对角线矩阵，它的求逆可以直接为对角线块分别求逆，如果是逆深度，对角线块为1维的，则直接为对角线的倒数，这里可以加速
         MatXX Hmm_inv(MatXX::Zero(marg_size, marg_size));
@@ -404,8 +405,8 @@ void Problem::SolveLinearSystem() {
 
         // TODO:: home work. 完成舒尔补 Hpp, bpp 代码
         MatXX tempH = Hpm * Hmm_inv;
-        H_pp_schur_ = Hessian_.block(0,0,reserve_size*6,reserve_size*6) - tempH * Hmp;
-        b_pp_schur_ = bpp -  Hpm* Hmm_inv;
+        H_pp_schur_ = Hessian_.block(0,0,reserve_size,reserve_size) - tempH * Hmp;
+        b_pp_schur_ = bpp -  Hpm* Hmm_inv*bmm;
 
         // step2: solve Hpp * delta_x = bpp
         VecX delta_x_pp(VecX::Zero(reserve_size));
@@ -464,7 +465,7 @@ void Problem::ComputeLambdaInitLM() {
     for (auto edge: edges_) {
         currentChi_ += edge.second->Chi2();
     }
-    if (err_prior_.rows() > 0)      // marg prior residual
+    if (err_prior_.rows() > 0)      // marg prio residualr 
         currentChi_ += err_prior_.norm();
 
     stopThresholdLM_ = 1e-6 * currentChi_;          // 迭代条件为 误差下降 1e-6 倍
@@ -622,10 +623,15 @@ void Problem::TestMarginalize() {
                               saes.eigenvectors().transpose();
 
     // TODO:: home work. 完成舒尔补操作
-    Eigen::MatrixXd Arm = H_marg.block(0,reserve_size,n2,m2);
-    Eigen::MatrixXd Amr = H_marg.block(reserve_size,0,m2,n2);
+    Eigen::MatrixXd Arm = H_marg.block(0,reserve_size-1,n2,m2);
+   std::cout << "----------Arm ------------"<< std::endl;
+   std::cout << Arm << std::endl;
+    Eigen::MatrixXd Amr = H_marg.block(reserve_size-1,0,m2,n2);
+    std::cout << "----------Amr ------------"<< std::endl;
+   std::cout << Amr << std::endl;
     Eigen::MatrixXd Arr = H_marg.block(0,0,n2,n2);
-
+std::cout << "----------Arr ------------"<< std::endl;
+   std::cout << Arr << std::endl;
     Eigen::MatrixXd tempB = Arm * Amm_inv;
     Eigen::MatrixXd H_prior = Arr - tempB * Amr;
 
